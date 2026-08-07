@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Svitávka - žárový pohřeb, mladší až pozdní doba bronzová</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #121212;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Horní lišta */
+    .header {
+      height: 50px;
+      background: #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid #333;
+      color: #e0e0e0;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+
+    .header h1 {
+      font-size: 1.1rem;
+      color: #e5a93c;
+    }
+
+    /* Ovládání zoomu */
+    .controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .btn {
+      background: #2a2a2a;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: bold;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn:hover {
+      background: #3a3a3a;
+      border-color: #e5a93c;
+    }
+
+    /* Hlavní pracovní plocha */
+    .viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    /* Kontejner srovnávače */
+    .slider-container {
+      position: relative;
+      max-width: 100%;
+      max-height: calc(100vh - 80px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      border-radius: 6px;
+      overflow: hidden;
+      user-select: none;
+      transform-origin: center center;
+      transition: transform 0.05s ease-out;
+    }
+
+    /* Spodní obrázek: fotka.jpg */
+    .img-under {
+      display: block;
+      max-width: 100%;
+      max-height: calc(100vh - 80px);
+      width: auto;
+      height: auto;
+      pointer-events: none;
+    }
+
+    /* Horní obrázek: planek.jpg (překrývá fotku vpravo) */
+    .img-over {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      clip-path: inset(0 0 0 50%);
+    }
+
+    /* Svislá čára jezdce */
+    .slider-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 3px;
+      background: #e5a93c;
+      cursor: col-resize;
+      z-index: 10;
+      transform: translateX(-50%);
+    }
+
+    /* Tlačítko na jezdci */
+    .slider-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 36px;
+      height: 36px;
+      background: #e5a93c;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      color: #121212;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    /* Štítky vrstev v rozích */
+    .label {
+      position: absolute;
+      bottom: 12px;
+      padding: 4px 10px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .label-left { left: 12px; }
+    .label-right { right: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Svitávka - žárový pohřeb, mladší až pozdní doba bronzová</h1>
+    <div class="controls">
+      <button class="btn" id="btnZoomIn">🔍 +</button>
+      <button class="btn" id="btnZoomOut">🔍 −</button>
+      <button class="btn" id="btnReset">↺ Reset</button>
+    </div>
+  </div>
+
+  <div class="viewport" id="viewport">
+    <div class="slider-container" id="sliderContainer">
+      
+      <!-- 1. SPODNÍ OBRÁZEK: fotka.jpg -->
+      <img src="fotka.jpg" class="img-under" id="imgUnder" alt="Fotografie">
+      <span class="label label-left">Pouze fotka</span>
+
+      <!-- 2. HORNÍ OBRÁZEK: planek.jpg -->
+      <img src="planek.jpg" class="img-over" id="imgOver" alt="Plánek">
+      <span class="label label-right">Plánek</span>
+
+      <!-- 3. POSUVNÝ JEZDEC -->
+      <div class="slider-line" id="sliderLine">
+        <div class="slider-button">↔</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const container = document.getElementById('sliderContainer');
+    const imgOver = document.getElementById('imgOver');
+    const sliderLine = document.getElementById('sliderLine');
+    const viewport = document.getElementById('viewport');
+
+    let isDragging = false;
+    let dragMode = 'slider'; // 'slider' nebo 'pan'
+
+    // Zoom a posun
+    let scale = 1;
+    let panX = 0;
+    let panY = 0;
+    let startX = 0;
+    let startY = 0;
+
+    function updateTransform() {
+      container.style.transform = `scale(${scale}) translate(${panX}px, ${panY}px)`;
+    }
+
+    function setZoom(newScale) {
+      scale = Math.min(Math.max(1, newScale), 5); // Omezení zoomu 1x až 5x
+      if (scale === 1) {
+        panX = 0;
+        panY = 0;
+      }
+      updateTransform();
+    }
+
+    // Tlačítka ovládání
+    document.getElementById('btnZoomIn').addEventListener('click', () => setZoom(scale + 0.5));
+    document.getElementById('btnZoomOut').addEventListener('click', () => setZoom(scale - 0.5));
+    document.getElementById('btnReset').addEventListener('click', () => setZoom(1));
+
+    // Zoom kolečkem myši
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.25 : -0.25;
+      setZoom(scale + delta);
+    }, { passive: false });
+
+    // Posun jezdce
+    function moveSlider(e) {
+      const rect = container.getBoundingClientRect();
+      let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      if (!clientX) return;
+
+      let x = clientX - rect.left;
+      if (x < 0) x = 0;
+      if (x > rect.width) x = rect.width;
+
+      const percentage = (x / rect.width) * 100;
+      imgOver.style.clipPath = `inset(0 0 0 ${percentage}%)`;
+      sliderLine.style.left = `${percentage}%`;
+    }
+
+    // Zahájení tažení (rozhodnutí mezi sliderem a posunem mapy)
+    function startDragging(e) {
+      isDragging = true;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      startX = clientX;
+      startY = clientY;
+
+      const rect = container.getBoundingClientRect();
+      const clickXInContainer = clientX - rect.left;
+      const sliderXInContainer = (sliderLine.offsetLeft / container.offsetWidth) * rect.width;
+      const distanceToSlider = Math.abs(clickXInContainer - sliderXInContainer);
+
+      // Pokud držíme jezdec nebo jsme bez přiblížení (1x), posouváme jezdec. Při přiblížení posouváme výřez.
+      if (scale === 1 || distanceToSlider < 40 || e.target.closest('#sliderLine')) {
+        dragMode = 'slider';
+        moveSlider(e);
+      } else {
+        dragMode = 'pan';
+      }
+    }
+
+    function handleMove(e) {
+      if (!isDragging) return;
+
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      if (dragMode === 'slider') {
+        moveSlider(e);
+      } else if (dragMode === 'pan') {
+        const dx = (clientX - startX) / scale;
+        const dy = (clientY - startY) / scale;
+        panX += dx;
+        panY += dy;
+        startX = clientX;
+        startY = clientY;
+        updateTransform();
+      }
+    }
+
+    function stopDragging() {
+      isDragging = false;
+    }
+
+    container.addEventListener('mousedown', startDragging);
+    window.addEventListener('mouseup', stopDragging);
+    window.addEventListener('mousemove', handleMove);
+
+    container.addEventListener('touchstart', startDragging);
+    window.addEventListener('touchend', stopDragging);
+    window.addEventListener('touchmove', handleMove);
+  </script>
+</body>
+</html>
