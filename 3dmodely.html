@@ -24,28 +24,51 @@
 
     /* Horní lišta */
     .header {
-      height: 50px;
+      min-height: 50px;
+      height: auto;
       background: #1a1a1a;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 20px;
+      padding: 10px 20px;
       border-bottom: 1px solid #333;
       flex-shrink: 0;
       position: sticky;
       top: 0;
       z-index: 100;
+      flex-wrap: wrap;
+      gap: 10px;
+   
     }
 
     .header h1 {
       font-size: 1.1rem;
       color: #e5a93c;
+      line-height: 1.3;
     }
 
     .controls {
       display: flex;
       gap: 8px;
+      flex-wrap: wrap;
     }
+
+    /* Úpravy pro mobilní zařízení */
+    @media (max-width: 768px) {
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+     }
+  
+    .header h1 {
+      font-size: 0.95rem;
+     }
+
+    .controls {
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }
 
     .btn {
       background: #2a2a2a;
